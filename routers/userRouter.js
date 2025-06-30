@@ -1,9 +1,20 @@
 import express from 'express';
-import { getone, saveUser } from '../controllers/userController.js';
+import {
+  saveUser,
+  getOneUser,
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  getByRole
+} from '../controllers/userController.js';
 
-const userRouter = express.Router();
+const router = express.Router();
 
-userRouter.post("/register",saveUser);
-userRouter.post("/login",getone);
+router.post('/', saveUser);
+router.get('/', getAllUsers);
+router.get('/:id', getOneUser);
+router.put('/:id', updateUser);
+router.delete('/:id', deleteUser);
+router.get('/role/:role', getByRole);
 
-export default userRouter;
+export default router;

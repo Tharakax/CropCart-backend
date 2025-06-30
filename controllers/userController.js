@@ -1,67 +1,161 @@
 import express from 'express';
-import UserModel from '../models/user.js';
+import User from '../models/user.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import validator from 'validator';
 
-export function saveUser(req,res){
-    console.log(req.body.password);
+// Save a new user
+export const saveUser = async (req, res) => {
+  try {
+    const { role, firstName, lastName, email, password, phone, address, farmDetails } = req.body;
 
-    const hashedpassword = bcrypt.hashSync(req.body.password ,10);
+    // Validate email
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
+    }
+
+    // Validate phone if provided
+    if (phone && !validator.isMobilePhone(phone)) {
+      return res.status(400).json({ message: 'Please provide a valid phone number' });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create new user
+    const newUser = new User({
+      role,
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      phone,
+      address,
+      farmDetails: role === 'farmer' ? farmDetails : undefined,
+      isVerified: role === 'customer' // Auto-verify customers, admins/farmers might need manual verification
+    });
+
+    // Save to database
+    const savedUser = await newUser.save();
+
+    // Remove password from response
+    savedUser.password = undefined;
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: savedUser
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating user', error: error.message });
+  }
+};
+
+// Get a single user by ID
+export const getOneUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+};
+
+// Get all users with optional filtering
+export const getAllUsers = async (req, res) => {
+  try {
+    // You can add query parameters for filtering (e.g., ?role=farmer)
+    const { role } = req.query;
+    const filter = role ? { role } : {};
+
+    const users = await User.find(filter).select('-password');
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users', error: error.message });
+  }
+};
+
+// Update a user
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Don't allow role changes via this endpoint (create separate admin endpoint if needed)
+    if (updates.role) {
+      return res.status(400).json({ message: 'Role cannot be changed this way' });
+    }
+
+    // If password is being updated, hash it first
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 12);
+    }
+
+    // Validate phone if being updated
+    if (updates.phone && !validator.isMobilePhone(updates.phone)) {
+      return res.status(400).json({ message: 'Please provide a valid phone number' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'User updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user', error: error.message });
+  }
+};
+
+// Delete a user
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedUser = await User.findByIdAndDelete(id).select('-password');
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'User deleted successfully',
+      user: deletedUser
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user', error: error.message });
+  }
+};
+
+// Get users by role
+export const getByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
     
-    console.log(hashedpassword);
-    const newUser = new UserModel({
-        email : req.body.email,
-        name : req.body.name,
-        password : hashedpassword,
+    if (!['customer', 'admin', 'farmer'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role specified' });
+    }
 
-    })
-    newUser.save().then(()=>{
-            res.json({
-                    message : "User saved"
-            })
-    }).catch(()=>{
-        res.json({
-            message : "error saving user"
-        })
-    })
-}
-
-export function getone(req,res){
-
-   
-    const email = req.body.email;
-    const password = req.body.password;
-
-    UserModel.findOne({
-        email : email
-
-        
-    }).then((user)=>{
-        if(user==null){
-            res.json({
-                message : "User not found"
-            })
-        }else{
-            const isPasswordCorrect = bcrypt.compareSync(password , user.password)
-            
-            if(isPasswordCorrect){
-                const userdata = {
-                    email : user.email,
-                    name : user.name,
-                    role : user.role
-                }
-                const token = jwt.sign(userdata , process.env.JWT_key) 
-                res.json({
-                    message : "loggin success",
-                    token : token
-                })
-            }else{
-                res.json({
-                    message : "wrong password"
-
-                })
-            }
-        }
-    })
-
-}
+    const users = await User.find({ role }).select('-password');
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users by role', error: error.message });
+  }
+};
