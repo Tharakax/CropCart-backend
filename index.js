@@ -7,10 +7,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import userRouter from './routers/userRouter.js';
-//mongodb+srv://tharaka:123@cluster0.dixk0d3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 const app = express();
 
-console.log
 mongoose.connect(process.env.MONGO_URL).then(
     ()=>{
         console.log("Database connected")
