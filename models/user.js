@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
 
     role: {
     type: String,
-    enum: ['customer', 'admin', 'farmer'],
+    
     required: true,
     default: 'customer'
   },
@@ -31,8 +31,8 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Please provide a password'],
-    minlength: 8,
-    select: false
+    minlength: 8
+    
   },
   phone: {
     type: String,

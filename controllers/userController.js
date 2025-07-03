@@ -2,6 +2,8 @@ import express from 'express';
 import User from '../models/user.js';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
+import jwt from 'jsonwebtoken';
+
 
 // Save a new user
 export const saveUser = async (req, res) => {
@@ -56,20 +58,53 @@ export const saveUser = async (req, res) => {
 };
 
 // Get a single user by ID
-export const getOneUser = async (req, res) => {
+export async function loginUser(req, res) {
   try {
-    const { id } = req.params;
-    const user = await User.findById(id).select('-password');
+    const email = req.body.email;
+    const password = req.body.password; 
+    
+    const user = await User.findOne({
+      email: email
+    });
 
-    if (!user) {
+    if(user != null){
+      try{
+        
+        const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        // Remove password from response
+        const userdata = {
+                    email : user.email,
+                    name : user.name,
+                    role : user.role
+                    
+                }
+                const token = jwt.sign(userdata , process.env.JWT_key) 
+                return res.status(200).json({
+                    message : "loggin success",
+                    token : token,
+                    user : user 
+                })
+
+      } else {
+        return res.status(401).json({ message: 'Invalid password' });
+        
+      }
+      }catch(error){
+        return res.status(500).json({ message: 'Error comparing passwords', error: error.message });
+      } 
+      
+
+    }else{
       return res.status(404).json({ message: 'User not found' });
+      
     }
 
-    res.status(200).json(user);
+   
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error: error.message });
+    return res.status(500).json({ message: 'Error logging in', error: error.message });
   }
-};
+}
 
 // Get all users with optional filtering
 export const getAllUsers = async (req, res) => {
