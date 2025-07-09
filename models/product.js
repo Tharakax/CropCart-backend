@@ -48,21 +48,10 @@ const productSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: true,
-    enum: ['kg', 'lb', 'piece', 'bunch', 'pack'],
+    enum: ['kg', 'lb','g', 'piece', 'bunch', 'pack'],
     default: 'kg'
   },
-  images: [
-    {
-      public_id: {
-        type: String,
-        required: true
-      },
-      url: {
-        type: String,
-        required: true
-      }
-    }
-  ],
+  images: [],
   ratings: {
     type: Number,
     default: 0

@@ -1,50 +1,48 @@
 import express from 'express';
 import Product from '../models/product.js';
 import validator from 'validator';
+import User from '../models/user.js';
+import JWTauth from '../middleware/auth.js';
 
 // Save a new product
-export async function saveProduct(req, res){
-  try {
-    const { name, description, price, displayprice, category, stock, unit, images, createdBy } = req.body;
 
-    // Validate product data
-    if (!name || !description || !price || !category || !stock || !unit) {
-      return res.status(400).json({ message: 'Please provide all required fields' });
-    }
+export async function saveProduct(req, res) {
+  // Get user ID from authenticated user
 
-    if (!validator.isNumeric(price.toString()) || price < 0) {
-      return res.status(400).json({ message: 'Price must be a positive number' });
-    }
+   console.log("params "+  req.user._id); 
 
-    if (displayprice && (!validator.isNumeric(displayprice.toString()) || displayprice < 0)) {
-      return res.status(400).json({ message: 'Display Price must be a positive number' });
-    }
+  req.body.createdBy = req.user._id // Assuming User._id is the ID of the authenticated user
+  // If images are uploaded, process them
+  
 
-    // Create new product
-    const newProduct = new Product({
-      name,
-      description,
-      price,
-      displayprice,
-      category,
-      stock,
-      unit,
-      images,
-      createdBy
-    });
+  // Create product data object
+  const productData = {
+    name: req.body.name,
+    description: req.body.description,
+    price: req.body.price,
+    displayprice: req.body.displayprice || req.body.price, // Default to price if not provided
+    category: req.body.category,
+    stock: req.body.stock,
+    unit: req.body.unit,
+    images: req.body.images || [], // Default to empty array if no images
+    createdBy: createdBy,
+    isFeatured: req.body.isFeatured || false,
+    discount: req.body.discount || 0,
+    tags: req.body.tags || [],
+    shelfLife: req.body.shelfLife,
+    storageInstructions: req.body.storageInstructions
+  };
 
-    // Save to database
-    const savedProduct = await newProduct.save();
+  // Create product in database
+  const product = await Product.create(productData);
+  console.log(productData.images);
+    console.log(req.body.images);
 
-    res.status(201).json({
-      message: 'Product created successfully',
-      product: savedProduct
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating product', error: error.message });
-  }
+  res.status(201).json({
+    success: true,
+    product
+  });
 };
-
 
 export async function getAllProducts(req, res) {
   try {
@@ -55,4 +53,27 @@ export async function getAllProducts(req, res) {
   }
 }
 
+export async function getProductById(req, res) {
+  try {
+    const product = await Product.findById(req.params.id).populate('createdBy', 'firstName lastName email');
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching product', error: error.message });
+  }
+}
+
+export async function deleteProduct(req, res) {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting product', error: error.message });
+  }
+}
 
