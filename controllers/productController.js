@@ -9,9 +9,9 @@ import JWTauth from '../middleware/auth.js';
 export async function saveProduct(req, res) {
   // Get user ID from authenticated user
 
-   console.log("params "+  req.user._id); 
+   console.log("params "+  req.user.id); 
 
-  req.body.createdBy = req.user._id // Assuming User._id is the ID of the authenticated user
+  // Assuming User._id is the ID of the authenticated user
   // If images are uploaded, process them
   
 
@@ -25,10 +25,10 @@ export async function saveProduct(req, res) {
     stock: req.body.stock,
     unit: req.body.unit,
     images: req.body.images || [], // Default to empty array if no images
-    createdBy: createdBy,
     isFeatured: req.body.isFeatured || false,
     discount: req.body.discount || 0,
     tags: req.body.tags || [],
+    createdBy: req.user.id || null, // Use authenticated user's ID
     shelfLife: req.body.shelfLife,
     storageInstructions: req.body.storageInstructions
   };
@@ -77,3 +77,78 @@ export async function deleteProduct(req, res) {
   }
 }
 
+// @desc    Update a product
+// @route   PUT /api/product/:id
+// @access  Private/Admin
+export async function editProduct(req, res) {
+  try {
+    const {
+      name,
+      description,
+      price,
+      unit,
+      discount,
+      displayprice,
+      category,
+      stock,
+      shelfLife,
+      storageInstructions,
+      tags,
+      isFeatured,
+      images = [] // Default to empty array
+    } = req.body;
+
+    // Parse tags if it's a string (from form data)
+    const parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags || [];
+
+    // Find the product to update
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Update product fields
+    product.name = name || product.name;
+    product.description = description || product.description;
+    product.price = price || product.price;
+    product.unit = unit || product.unit;
+    product.discount = discount || product.discount;
+    product.displayprice = displayprice || product.displayprice;
+    product.category = category || product.category;
+    product.stock = stock || product.stock;
+    product.shelfLife = shelfLife || product.shelfLife;
+    product.storageInstructions = storageInstructions || product.storageInstructions;
+    product.tags = parsedTags;
+    product.isFeatured = isFeatured || false;
+    product.images = images; // Set the images array directly
+
+    // Save the updated product
+    const updatedProduct = await product.save();
+
+    res.status(200).json({
+      _id: updatedProduct._id,
+      name: updatedProduct.name,
+      description: updatedProduct.description,
+      price: updatedProduct.price,
+      unit: updatedProduct.unit,
+      discount: updatedProduct.discount,
+      displayprice: updatedProduct.displayprice,
+      category: updatedProduct.category,
+      stock: updatedProduct.stock,
+      shelfLife: updatedProduct.shelfLife,
+      storageInstructions: updatedProduct.storageInstructions,
+      tags: updatedProduct.tags,
+      isFeatured: updatedProduct.isFeatured,
+      images: updatedProduct.images,
+      createdAt: updatedProduct.createdAt
+    });
+
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ 
+      message: 'Failed to update product',
+      error: error.message 
+    });
+  }
+};

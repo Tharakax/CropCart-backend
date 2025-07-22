@@ -88,7 +88,7 @@ const productSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   updatedAt: {
     type: Date,
