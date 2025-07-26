@@ -9,6 +9,7 @@ dotenv.config();
 
 import userRouter from './routers/userRouter.js';
 import productRouter from './routers/productRouter.js';
+import orderRouter from './routers/orderRouter.js';
 const app = express();
 
 mongoose.connect(process.env.MONGO_URL).then(
@@ -27,6 +28,7 @@ app.use(JWTauth)
 
 app.use("/api/user", userRouter);
 app.use("/api/product", productRouter)
+app.use("/api/order", orderRouter)
 
 
 app.listen(3000,()=>{

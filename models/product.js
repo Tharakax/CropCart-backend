@@ -23,7 +23,7 @@ const productSchema = new mongoose.Schema({
     required: [false, 'Display Product price is optional'],
     min: [0, 'Display Price must be at least 0']
   },
-  category: {
+    category: {
     type: String,
     required: [true, 'Please select a category'],
     enum: {
@@ -33,13 +33,17 @@ const productSchema = new mongoose.Schema({
         'leafy-greens',
         'root-vegetables',
         'berries',
-        'tropical-fruits',
-        'organic',
-        'exotic'
+        'animal-products',
+        'dairy-products',
+        'meats',
+        
+        
+        
       ],
       message: 'Please select correct category for product'
     }
-  },
+  }
+,
   stock: {
     type: Number,
     required: [true, 'Please enter product stock'],
@@ -119,7 +123,6 @@ const productSchema = new mongoose.Schema({
 // Indexes for better performance
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1 });
-productSchema.index({ organic: 1 });
 productSchema.index({ price: 1 });
 
 const Product = mongoose.model('Product', productSchema);
